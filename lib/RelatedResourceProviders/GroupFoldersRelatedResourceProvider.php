@@ -13,6 +13,7 @@ use OCA\Circles\CirclesManager;
 use OCA\Circles\Model\FederatedUser;
 use OCA\Circles\Model\Member;
 use OCA\GroupFolders\Folder\FolderManager;
+use OCA\GroupFolders\Folder\FolderDefinitionWithMappings;
 use OCA\RelatedResources\Db\FilesShareRequest;
 use OCA\RelatedResources\Exceptions\GroupFolderNotFoundException;
 use OCA\RelatedResources\IRelatedResource;
@@ -72,7 +73,7 @@ class GroupFoldersRelatedResourceProvider implements IRelatedResourceProvider {
 		}
 
 		$related = $this->convertToRelatedResource($folder);
-		$this->processApplicableMap($circlesManager, $related, $folder['groups'] ?? []);
+		$this->processApplicableMap($circlesManager, $related, $folder->groups ?? []);
 
 		return $related;
 	}
@@ -80,17 +81,17 @@ class GroupFoldersRelatedResourceProvider implements IRelatedResourceProvider {
 	public function getItemsAvailableToEntity(FederatedUser $entity): array {
 		$items = [];
 		foreach ($this->folders as $folder) {
-			foreach ($folder['groups'] as $k => $entry) {
+			foreach ($folder->groups as $k => $entry) {
 				if ($entity->getBasedOn()->getSource() === Member::TYPE_GROUP
 					&& $entry['type'] === 'group'
 					&& $k === $entity->getUserId()) {
-					$items[] = (string)$folder['id'];
+					$items[] = (string)$folder->id;
 				}
 
 				if ($entity->getBasedOn()->getSource() === Member::TYPE_CIRCLE
 					&& $entry['type'] === 'circle'
 					&& $k === $entity->getSingleId()) {
-					$items[] = (string)$folder['id'];
+					$items[] = (string)$folder->id;
 				}
 			}
 		}
@@ -105,9 +106,9 @@ class GroupFoldersRelatedResourceProvider implements IRelatedResourceProvider {
 	/**
 	 * @param array{acl: bool, groups: array<array-key, array<array-key, int|string>>, id: int, mount_point: mixed, quota: int, size: 0} $folderData
 	 */
-	public function convertToRelatedResource(array $folderData): IRelatedResource {
-		$related = new RelatedResource(self::PROVIDER_ID, (string)($folderData['id'] ?? 0));
-		$folderName = $folderData['mount_point'] ?? 'groupfolder';
+	public function convertToRelatedResource(FolderDefinitionWithMappings $folderData): IRelatedResource {
+		$related = new RelatedResource(self::PROVIDER_ID, (string)($folderData->id ?? 0));
+		$folderName = $folderData->mountPoint ?? 'groupfolder';
 		$related->setTitle($folderName);
 		$related->setSubtitle($this->l10n->t('Group Folder'));
 		$related->setTooltip($this->l10n->t('Group Folder "%s"', '/' . $folderName . '/'));
@@ -167,9 +168,9 @@ class GroupFoldersRelatedResourceProvider implements IRelatedResourceProvider {
 	 * @return array{acl: bool, groups: array<array-key, array<array-key, int|string>>, id: int, mount_point: mixed, quota: int, size: 0}
 	 * @throws GroupFolderNotFoundException
 	 */
-	public function getFolder(int $folderId): array {
+	public function getFolder(int $folderId): FolderDefinitionWithMappings {
 		foreach ($this->folders as $folder) {
-			if ($folder['id'] === $folderId) {
+			if ($folder->id === $folderId) {
 				return $folder;
 			}
 		}
